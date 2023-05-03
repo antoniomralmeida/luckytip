@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -62,20 +63,34 @@ func LoadSetup() (setup MegaSetup, err error) {
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 
 	doc.Find("table").Each(func(index int, tablehtml *goquery.Selection) {
-		if index == 1 {
-			tablehtml.Find("tr").Each(func(indextr int, rowhtml *goquery.Selection) {
+		if index == 0 {
+			tablehtml.Find("th").Each(func(indexth int, rowhtml *goquery.Selection) {
+				if indexth == 1 {
+					rowhtml.Find("td").Each(func(indexth int, tablecell *goquery.Selection) {
+						if indexth == 2 {
+							fmt.Println(tablecell.Text())
+						}
+					})
+				}
+			})
 
+			tablehtml.Find("tr").Each(func(indextr int, rowhtml *goquery.Selection) {
+				if indextr == 1 {
+					n := 6
+					rowhtml.Find("th").Each(func(indexth int, tablecell *goquery.Selection) {
+						setup.Premios = append(setup.Premios, MegaPremio{Acertos: n, Premio: tablecell.Text()})
+						n--
+					})
+				}
 				var modalidade int
 				var valor float64
-				rowhtml.Find("td").Each(func(indexth int, tablecell *goquery.Selection) {
-					fmt.Println("tablecell:", indexth, tablecell.Text())
-					if indexth == 0 {
+				rowhtml.Find("td").Each(func(indextd int, tablecell *goquery.Selection) {
+					if indextd == 0 {
 						modalidade, _ = strconv.Atoi(tablecell.Text())
 					}
-					if indexth == 2 {
-						txt := tablecell.Text()
+					if indextd == 1 {
+						txt := strings.ReplaceAll(strings.ReplaceAll(tablecell.Text(), ".", ""), ",", ".")
 						valor, _ = strconv.ParseFloat(txt, 64)
-						fmt.Println(modalidade, valor, txt)
 						setup.Modalidades = append(setup.Modalidades, MegaModalidade{Numeros: modalidade, Valor: valor})
 					}
 				})
@@ -95,15 +110,16 @@ func CreateFactory() (ms *MegaSena, err error) {
 	)
 	ms = new(MegaSena)
 	ms.Estatistica = make(map[int]int)
-	if ms.Setup, err = LoadSetup(); err != nil {
-		return
-	}
 	data, _ := ioutil.ReadFile(MEGAJSON)
 	if len(data) > 0 {
 		if err = json.Unmarshal(data, &ms); err != nil {
 			return
 		}
 	}
+	if ms.Setup, err = LoadSetup(); err != nil {
+		return
+	}
+
 	if cm, err = LerConcurso(0); err != nil {
 		return
 	}
