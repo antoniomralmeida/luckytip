@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -48,6 +49,40 @@ const (
 
 	MEGAJSON = "megasena.json"
 )
+
+func (ms *MegaSena) SortKeysDesc() []int {
+
+	keys := make([]int, 0, ms.Setup.NumerosPossiveis)
+
+	for key := range ms.Estatistica {
+		keys = append(keys, key)
+	}
+	sort.SliceStable(keys, func(i, j int) bool {
+		return ms.Estatistica[keys[i]] > ms.Estatistica[keys[j]]
+	})
+	return keys
+}
+
+func (ms *MegaSena) Aposta(valor float64) (jogos [][]int, rest float64) {
+	rest = valor
+	if valor < ms.Setup.Modalidades[0].Valor {
+		return
+	}
+
+	for i := len(ms.Setup.Modalidades) - 1; i >= 0; {
+		if rest > ms.Setup.Modalidades[i].Valor {
+			jogos = append(jogos, make([]int, ms.Setup.Modalidades[i].Numeros))
+			rest -= ms.Setup.Modalidades[i].Valor
+		} else {
+			i--
+		}
+	}
+
+	hist := ms.SortKeysDesc()
+	fmt.Println(hist)
+
+	return
+}
 
 func LoadSetup() (setup MegaSetup, err error) {
 	var (
