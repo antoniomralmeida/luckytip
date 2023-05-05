@@ -11,7 +11,8 @@ func main() {
 	MS, _ := megasena.CreateFactory()
 	app := fiber.New()
 
-	fmt.Println(MS.Aposta(70.3))
+	fmt.Println(MS.Aposta(5))
+
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.JSON(MS)
 	})

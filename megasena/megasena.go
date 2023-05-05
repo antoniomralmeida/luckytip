@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"sort"
@@ -13,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	combinations "github.com/mxschmitt/golang-combinations"
 )
 
 type MegaModalidade struct {
@@ -35,6 +37,7 @@ type MegaSena struct {
 	UltimoConcurso int         `json:"ultimoconcurso"`
 	Estatistica    map[int]int `json:"estatistica"`
 	Setup          MegaSetup   `json:"setup"`
+	Histogram      []int       `json:"histogram"`
 }
 
 type ConcursoMega struct {
@@ -50,37 +53,45 @@ const (
 	MEGAJSON = "megasena.json"
 )
 
-func (ms *MegaSena) SortKeysDesc() []int {
-
-	keys := make([]int, 0, ms.Setup.NumerosPossiveis)
-
-	for key := range ms.Estatistica {
-		keys = append(keys, key)
-	}
-	sort.SliceStable(keys, func(i, j int) bool {
-		return ms.Estatistica[keys[i]] > ms.Estatistica[keys[j]]
-	})
-	return keys
+func (ms *MegaSena) BestN(n int) []int {
+	return ms.Histogram[0:n]
 }
 
-func (ms *MegaSena) Aposta(valor float64) (jogos [][]int, rest float64) {
-	rest = valor
+type Bets struct {
+	Bets   [][]int `json:"bets"`
+	Change float64 `json:"change"`
+}
+
+func (ms *MegaSena) Aposta(valor float64) (bets Bets, js string) {
+
+	bets.Change = valor
 	if valor < ms.Setup.Modalidades[0].Valor {
 		return
 	}
 
 	for i := len(ms.Setup.Modalidades) - 1; i >= 0; {
-		if rest > ms.Setup.Modalidades[i].Valor {
-			jogos = append(jogos, make([]int, ms.Setup.Modalidades[i].Numeros))
-			rest -= ms.Setup.Modalidades[i].Valor
+		if bets.Change >= ms.Setup.Modalidades[i].Valor {
+			bets.Bets = append(bets.Bets, make([]int, ms.Setup.Modalidades[i].Numeros))
+			bets.Change -= ms.Setup.Modalidades[i].Valor
 		} else {
 			i--
 		}
 	}
 
-	hist := ms.SortKeysDesc()
-	fmt.Println(hist)
+	for i, _ := range bets.Bets {
+		size := len(bets.Bets[i])
+		best := ms.BestN(size + 1)
+		result := combinations.Combinations(best, size)
+		rndgame := rand.Intn(size + 1)
+		bet := result[rndgame]
+		sort.Slice(bet, func(i, j int) bool {
+			return bet[i] < bet[j]
+		})
+		bets.Bets[i] = bet
+	}
 
+	result, _ := json.Marshal(bets)
+	js = string(result)
 	return
 }
 
@@ -160,15 +171,28 @@ func CreateFactory() (ms *MegaSena, err error) {
 	}
 	UltimaMega = cm.Numero
 	for c := ms.UltimoConcurso + 1; c <= UltimaMega; c++ {
+		fmt.Printf("\033[0;0H %v%%", 100.0*c/(UltimaMega-ms.UltimoConcurso))
+
 		if cm, err = LerConcurso(c); err != nil {
 			return
 		}
 		for _, x := range cm.DezenasSorteadasOrdemSorteio {
 			n, _ := strconv.Atoi(x)
-			ms.Estatistica[n] = ms.Estatistica[n] + 1
+			ms.Estatistica[n] = ms.Estatistica[n] + c
 		}
 	}
 	ms.UltimoConcurso = UltimaMega
+	//Histogram
+	keys := make([]int, 0, ms.Setup.NumerosPossiveis)
+
+	for key := range ms.Estatistica {
+		keys = append(keys, key)
+	}
+	sort.SliceStable(keys, func(i, j int) bool {
+		return ms.Estatistica[keys[i]] > ms.Estatistica[keys[j]]
+	})
+	ms.Histogram = keys
+
 	if body, err = json.Marshal(ms); err != nil {
 		return
 	}
@@ -177,6 +201,7 @@ func CreateFactory() (ms *MegaSena, err error) {
 	}
 	fjson.Write(body)
 	fjson.Close()
+
 	return
 }
 
