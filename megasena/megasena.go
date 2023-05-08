@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/antoniomralmeida/luckytip/lib"
 	combinations "github.com/mxschmitt/golang-combinations"
 )
 
@@ -63,7 +64,8 @@ type Bets struct {
 }
 
 func (ms *MegaSena) Aposta(valor float64) (bets Bets, js string) {
-
+	var grauliberdade = 1
+	const MAX_TENTATIVAS = 100
 	bets.Change = valor
 	if valor < ms.Setup.Modalidades[0].Valor {
 		return
@@ -77,17 +79,37 @@ func (ms *MegaSena) Aposta(valor float64) (bets Bets, js string) {
 			i--
 		}
 	}
-
+	fmt.Println("jogos ", len(bets.Bets), bets.Change)
+	fmt.Println("Genando apostas...")
 	for i, _ := range bets.Bets {
+		fmt.Printf("\033[0;0H %v%%", 100.0*i/len(bets.Bets))
 		size := len(bets.Bets[i])
-		best := ms.BestN(size + 1)
+		best := ms.BestN(size + grauliberdade)
 		result := combinations.Combinations(best, size)
-		rndgame := rand.Intn(size + 1)
-		bet := result[rndgame]
-		sort.Slice(bet, func(i, j int) bool {
-			return bet[i] < bet[j]
-		})
-		bets.Bets[i] = bet
+
+		max := 0
+	global:
+		for {
+			max++
+			if max > MAX_TENTATIVAS {
+				grauliberdade++
+				best = ms.BestN(size + grauliberdade)
+				result = combinations.Combinations(best, size)
+				max = 0
+			}
+			rndgame := rand.Intn(len(result))
+			bet := result[rndgame]
+			for j := 0; j < i; j++ {
+				if lib.Contains(bets.Bets[j], bet) {
+					continue global
+				}
+			}
+			sort.Slice(bet, func(i, j int) bool {
+				return bet[i] < bet[j]
+			})
+			bets.Bets[i] = bet
+			break
+		}
 	}
 
 	result, _ := json.Marshal(bets)
@@ -170,6 +192,8 @@ func CreateFactory() (ms *MegaSena, err error) {
 		return
 	}
 	UltimaMega = cm.Numero
+	fmt.Println("\033[2J")
+	fmt.Println("Lendo jogos...")
 	for c := ms.UltimoConcurso + 1; c <= UltimaMega; c++ {
 		fmt.Printf("\033[0;0H %v%%", 100.0*c/(UltimaMega-ms.UltimoConcurso))
 
@@ -193,7 +217,7 @@ func CreateFactory() (ms *MegaSena, err error) {
 	})
 	ms.Histogram = keys
 
-	if body, err = json.Marshal(ms); err != nil {
+	if body, err = json.MarshalIndent(ms, " ", ""); err != nil {
 		return
 	}
 	if fjson, err = os.Create(MEGAJSON); err != nil {
