@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Lucky Tip</title>
+	</head>
+	<body>
+		<h1 style="color:blue;">
+			Lucky Tip</h1>
+		<form action="/" method="post" name="luckytip">
+			<p>
+				Valor da aposta (min R$5)&nbsp;</p>
+			<p>
+				<input name="valor" type="number" value="5" /><input name="send" type="submit" value="Gerar" /></p>
+		</form>
+		<table border="0" cellpadding="1" cellspacing="1" style="width: 500px">
+			<tbody>
+				<tr>
+					<td>
+						Valor</td>
+					<td>
+						{{.Value}}</td>
+				</tr>
+				<tr>
+					<td>
+						Apostas</td>
+					<td>
+						{{range .Bets}} {{.}} <br> {{end}}</td>
+				</tr>
+				<tr>
+					<td>
+						Troco</td>
+					<td>
+						{{.Change}}</td>
+				</tr>
+			</tbody>
+		</table>
+	</body>
+</html>

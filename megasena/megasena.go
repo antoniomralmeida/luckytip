@@ -51,7 +51,7 @@ const (
 	URL_MEGASENA_CAIXA_API = "https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena"
 	URL_MEGASENA_CAIXA     = "https://loterias.caixa.gov.br/Paginas/Mega-Sena.aspx"
 
-	MEGAJSON = "megasena.json"
+	MEGAJSON = "./data/megasena.json"
 )
 
 func (ms *MegaSena) BestN(n int) []int {
@@ -59,13 +59,15 @@ func (ms *MegaSena) BestN(n int) []int {
 }
 
 type Bets struct {
-	Bets   [][]int `json:"bets"`
-	Change float64 `json:"change"`
+	Value  float64 `json:"Value"`
+	Bets   [][]int `json:"Bets"`
+	Change float64 `json:"Change"`
 }
 
 func (ms *MegaSena) Aposta(valor float64) (bets Bets, js string) {
 	var grauliberdade = 1
 	const MAX_TENTATIVAS = 100
+	bets.Value = valor
 	bets.Change = valor
 	if valor < ms.Setup.Modalidades[0].Valor {
 		return
