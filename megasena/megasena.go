@@ -3,6 +3,7 @@ package megasena
 import (
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -15,6 +16,8 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/antoniomralmeida/luckytip/lib"
+	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/opts"
 	combinations "github.com/mxschmitt/golang-combinations"
 )
 
@@ -49,7 +52,7 @@ type ConcursoMega struct {
 
 const (
 	URL_MEGASENA_CAIXA_API = "https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena"
-	URL_MEGASENA_CAIXA     = "https://loterias.caixa.gov.br/Paginas/Mega-Sena.aspx"
+	URL_MEGASENA_CAIXA     = "https://loterias.caixa.gov.br/paginas/mega-sena.aspx"
 
 	MEGAJSON = "./data/megasena.json"
 )
@@ -81,10 +84,9 @@ func (ms *MegaSena) Aposta(valor float64) (bets Bets, js string) {
 			i--
 		}
 	}
-	fmt.Println("jogos ", len(bets.Bets), bets.Change)
-	fmt.Println("Genando apostas...")
+	fmt.Println("Gerando apostas...")
 	for i, _ := range bets.Bets {
-		fmt.Printf("\033[0;0H %v%%", 100.0*i/len(bets.Bets))
+		fmt.Printf("%v%%\r", 100.0*i/len(bets.Bets))
 		size := len(bets.Bets[i])
 		best := ms.BestN(size + grauliberdade)
 		result := combinations.Combinations(best, size)
@@ -113,7 +115,7 @@ func (ms *MegaSena) Aposta(valor float64) (bets Bets, js string) {
 			break
 		}
 	}
-
+	fmt.Println("OK   ")
 	result, _ := json.Marshal(bets)
 	js = string(result)
 	return
@@ -124,12 +126,17 @@ func LoadSetup() (setup MegaSetup, err error) {
 		resp *http.Response
 	)
 	setup = MegaSetup{NumerosPossiveis: 60}
+	fmt.Println("Lendo Setup...")
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	if resp, err = http.Get(URL_MEGASENA_CAIXA); err != nil {
 		return
 	}
 	defer resp.Body.Close()
-
+	if resp.StatusCode != 200 {
+		fmt.Println(resp)
+		err = errors.New(URL_MEGASENA_CAIXA + " " + resp.Status)
+		return
+	}
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 
 	doc.Find("table").Each(func(index int, tablehtml *goquery.Selection) {
@@ -167,6 +174,7 @@ func LoadSetup() (setup MegaSetup, err error) {
 			})
 		}
 	})
+	fmt.Println("OK   ")
 	return
 
 }
@@ -186,18 +194,19 @@ func CreateFactory() (ms *MegaSena, err error) {
 			return
 		}
 	}
-	if ms.Setup, err = LoadSetup(); err != nil {
-		return
+	if len(ms.Setup.Modalidades) == 0 {
+		if ms.Setup, err = LoadSetup(); err != nil {
+			return
+		}
 	}
 
 	if cm, err = LerConcurso(0); err != nil {
 		return
 	}
 	UltimaMega = cm.Numero
-	fmt.Println("\033[2J")
 	fmt.Println("Lendo jogos...")
 	for c := ms.UltimoConcurso + 1; c <= UltimaMega; c++ {
-		fmt.Printf("\033[0;0H %v%%", 100.0*c/(UltimaMega-ms.UltimoConcurso))
+		fmt.Printf("%v%%\r", 100.0*c/(UltimaMega-ms.UltimoConcurso))
 
 		if cm, err = LerConcurso(c); err != nil {
 			return
@@ -207,6 +216,7 @@ func CreateFactory() (ms *MegaSena, err error) {
 			ms.Estatistica[n] = ms.Estatistica[n] + c
 		}
 	}
+	fmt.Println("OK   ")
 	ms.UltimoConcurso = UltimaMega
 	//Histogram
 	keys := make([]int, 0, ms.Setup.NumerosPossiveis)
@@ -254,4 +264,39 @@ func LerConcurso(numero int) (cm *ConcursoMega, err error) {
 		return
 	}
 	return
+}
+
+func (ms *MegaSena) CreateBarChart() {
+	// create a new bar instance
+	bar := charts.NewBar()
+
+	// Set global options
+	bar.SetGlobalOptions(charts.WithTitleOpts(opts.Title{
+		Title:    "MegaSena",
+		Subtitle: "Tabela de frequência ponderada por tempo",
+	}))
+
+	// Put data into instance
+	bar.SetXAxis(ms.generateAxisItems()).
+		AddSeries("Número", ms.generateBarItems())
+	f, _ := os.Create("views/bar.html")
+	_ = bar.Render(f)
+}
+
+func (ms *MegaSena) generateAxisItems() []string {
+	items := make([]string, 0)
+	for i := 0; i < ms.Setup.NumerosPossiveis; i++ {
+		n := ms.Histogram[i]
+		items = append(items, strconv.Itoa(n))
+	}
+	return items
+}
+
+func (ms *MegaSena) generateBarItems() []opts.BarData {
+	items := make([]opts.BarData, 0)
+	for i := 0; i < ms.Setup.NumerosPossiveis; i++ {
+		n := ms.Histogram[i]
+		items = append(items, opts.BarData{Value: ms.Estatistica[n]})
+	}
+	return items
 }

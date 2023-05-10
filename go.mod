@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.1
+	github.com/go-echarts/go-echarts/v2 v2.2.6
 	github.com/gofiber/fiber/v2 v2.44.0
 	github.com/gofiber/template/html/v2 v2.0.0
 	github.com/mxschmitt/golang-combinations v1.2.0
@@ -28,4 +29,5 @@ require (
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
+	gonum.org/v1/gonum v0.13.0 // indirect
 )

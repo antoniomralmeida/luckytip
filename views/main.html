@@ -1,38 +1,60 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<title>Lucky Tip</title>
-	</head>
-	<body>
-		<h1 style="color:blue;">
-			Lucky Tip</h1>
-		<form action="/" method="post" name="luckytip">
-			<p>
-				Valor da aposta (min R$5)&nbsp;</p>
-			<p>
-				<input name="valor" type="number" value="5" /><input name="send" type="submit" value="Gerar" /></p>
-		</form>
-		<table border="0" cellpadding="1" cellspacing="1" style="width: 500px">
-			<tbody>
-				<tr>
-					<td>
-						Valor</td>
-					<td>
-						{{.Value}}</td>
-				</tr>
-				<tr>
-					<td>
-						Apostas</td>
-					<td>
-						{{range .Bets}} {{.}} <br> {{end}}</td>
-				</tr>
-				<tr>
-					<td>
-						Troco</td>
-					<td>
-						{{.Change}}</td>
-				</tr>
-			</tbody>
-		</table>
-	</body>
+
+<head>
+	<title>Lucky Tip</title>
+</head>
+
+<body>
+	<h1 style="color:blue;">
+		Lucky Tip - MEGASENA</h1>
+	<form action="/" method="post" name="luckytip">
+		<p>
+			Valor da aposta (min R$5)&nbsp;</p>
+		<p>
+			<input name="valor" type="number" value="5" /><input name="send" type="submit" value="Gerar" />
+		</p>
+	</form>
+	<table border="0" cellpadding="1" cellspacing="1" style="width: 500px">
+		<tbody>
+			<tr>
+				<td>
+					Valor</td>
+				<td>
+					{{.Value}}</td>
+			</tr>
+			<tr>
+				<td>
+					Apostas</td>
+				<td>
+					{{range .Bets}} {{.}} <br> {{end}}</td>
+			</tr>
+			<tr>
+				<td>
+					Troco</td>
+				<td>
+					{{.Change}}</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<a href="/bar.html"> Ver histograma</a>
+	<div>
+		<strong>T&eacute;cnica empregada</strong>
+	</div>
+	<div>
+		Com base na frequ&ecirc;ncia ponderada de sorteio dos n&uacute;mero no hist&oacute;rigo de jogos da megasena,
+		ponderado por tempo, ou seja os jogos mais recentes tem peso maior, &eacute; gerado um conjunto de jogos por
+		an&aacute;lise combinat&oacute;ria e exclus&atilde;o de conjuntos contidos, para evitar apostas contidas em
+		outras apostas.&nbsp;</div>
+	<div>
+		&Eacute; gerado ent&atilde;o os jogos, considerando as regras da loteria e o valor apostado, bem como &eacute;
+		gerado o valor do troco.&nbsp;</div>
+	<div>
+		Todos os dados dos jogos ocorridos e das regras da megasena s&atilde;o atualizados diariamente do site e da API
+		da Caixa Econ&ocirc;mica Federal.</div>
+	<div>
+		Boa sorte! e Bom Jogo!</div>
+</body>
+
 </html>
